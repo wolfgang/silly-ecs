@@ -33,21 +33,44 @@ struct Entity {
     pub string_component: Option<StringComponent>,
 }
 
+impl Entity {
+    fn has_num_component(&self) -> bool {
+        self.num_component.is_some()
+    }
+
+    fn has_string_component(&self) -> bool {
+        self.string_component.is_some()
+    }
+
+    fn get_num_component(&self) -> &NumComponent {
+        self.num_component.as_ref().unwrap()
+    }
+
+    fn get_num_component_mut(&mut self) -> &mut NumComponent {
+        self.num_component.as_mut().unwrap()
+    }
+
+    fn get_string_component(&self) -> &StringComponent {
+        self.string_component.as_ref().unwrap()
+    }
+
+
+}
+
 type Entities = Vec<Entity>;
 
-
 fn inc_num_system(entities: &mut Entities) {
-    for entity in entities.iter_mut().filter(|entity| { entity.num_component.is_some() }) {
-        let mut num_comp = entity.num_component.as_mut().unwrap();
+    for entity in entities.iter_mut().filter(|entity| { entity.has_num_component() }) {
+        let mut num_comp = entity.get_num_component_mut();
         num_comp.num += 5;
     }
 }
 
 
 fn print_data(entities: &Entities) {
-    for entity in entities.iter().filter(|entity| { entity.num_component.is_some() && entity.string_component.is_some() }) {
-        let num_comp = entity.num_component.as_ref().unwrap();
-        let string_comp = entity.string_component.as_ref().unwrap();
+    for entity in entities.iter().filter(|entity| { entity.has_num_component() && entity.has_string_component() }) {
+        let num_comp = entity.get_num_component();
+        let string_comp = entity.get_string_component();
         println!("Data: {} {}", num_comp.num, string_comp.str);
     }
 }
