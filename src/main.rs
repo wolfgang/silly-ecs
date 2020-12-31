@@ -1,3 +1,12 @@
+extern crate silly_ecs;
+
+use silly_ecs::{impl_entity, make_answer, impl_entity2};
+
+make_answer!();
+impl_entity!(NumComponent, StringComponent);
+
+impl_entity2!(NumComponent, StringComponent, FloatComponent, DummyComponent);
+
 macro_rules! gen_entity {
     ($($comp: ident),*) => {
     #[allow(non_snake_case)]
@@ -24,6 +33,14 @@ struct NumComponent {
 
 struct StringComponent {
     str: String
+}
+
+struct FloatComponent {
+    pub val: f64
+}
+
+struct DummyComponent {
+
 }
 
 struct Entity {
@@ -73,10 +90,28 @@ fn print_data(entities: &Entities) {
 
 
 fn main() {
-    println!("Hello, world!");
+    println!("{}", answer());
 
-    let entity2 = Entity2 {NumComponent: Some(NumComponent{num: 17}), StringComponent: None };
-    println!("entity2: {} {} {}", entity2.NumComponent.as_ref().unwrap().num, entity2.NumComponent(), entity2.StringComponent());
+    let mut entity = Entity4 {
+        num_component: Some(NumComponent { num: 17 }),
+        string_component: Some(StringComponent { str: String::from("HELLO") }),
+        float_component: Some(FloatComponent {val: 1234.5}),
+        dummy_component: None
+    };
+
+    println!("entity4 has components: {} {} {} {}",
+             entity.has_num_component(),
+             entity.has_string_component(),
+             entity.has_float_component(),
+             entity.has_dummy_component());
+
+
+    entity.get_mut_float_component().val = 678.9;
+
+    println!("entity4 values: {} {} {}",
+             entity.get_num_component().num,
+             entity.get_string_component().str,
+             entity.get_float_component().val);
 
     let mut entities = vec![
         Entity {
