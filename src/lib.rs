@@ -2,22 +2,23 @@
 use proc_macro::{TokenStream};
 use quote::{quote, format_ident};
 use inflector::Inflector;
+use syn::punctuated::Punctuated;
+use syn::parse::Parser;
+use syn::{Token, Ident};
 
 #[proc_macro]
-pub fn impl_entity(item: TokenStream) -> TokenStream {
-    let mut comps = Vec::new();
-    for comp in item {
-        if comp.to_string() != "," {
-            comps.push(comp.to_string());
-        }
-    }
+pub fn impl_entity(args: TokenStream) -> TokenStream {
+    let parser = Punctuated::<Ident, Token![,]>::parse_separated_nonempty;
+    let comp_idents = parser.parse(args).unwrap();
 
-    let mut comp_types = Vec::new();
-    let mut comp_names = Vec::new();
-    let mut comp_getters = Vec::new();
-    let mut comp_mut_getters = Vec::new();
-    let mut comp_preds = Vec::new();
-    for comp in comps.iter() {
+    let mut comp_types = Vec::with_capacity(comp_idents.len());
+    let mut comp_names = Vec::with_capacity(comp_idents.len());
+    let mut comp_getters = Vec::with_capacity(comp_idents.len());
+    let mut comp_mut_getters = Vec::with_capacity(comp_idents.len());
+    let mut comp_preds = Vec::with_capacity(comp_idents.len());
+
+    for ident in comp_idents.iter() {
+        let comp = ident.to_string();
         let comp_name = comp.to_snake_case();
         comp_types.push(format_ident!("{}", comp));
         comp_names.push(format_ident!("{}", comp_name));
@@ -40,7 +41,7 @@ pub fn impl_entity(item: TokenStream) -> TokenStream {
         }
     };
 
-    println!("{}", code);
+    // println!("{}", code);
 
     TokenStream::from(code)
 }
