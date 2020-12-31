@@ -1,4 +1,4 @@
-use silly_ecs::impl_entity;
+use silly_ecs::{impl_entity, system};
 
 struct NumComponent { pub num: u32 }
 
@@ -19,7 +19,7 @@ fn inc_num_system(entities: &mut Entities) {
     }
 }
 
-
+#[system(NumComponent,StringComponent)]
 fn print_data(entities: &Entities) {
     for entity in entities.iter().filter(|entity| { entity.has_num_component() && entity.has_string_component() }) {
         let num_comp = entity.get_num_component();

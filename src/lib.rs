@@ -46,3 +46,11 @@ pub fn impl_entity(args: TokenStream) -> TokenStream {
     TokenStream::from(code)
 }
 
+#[proc_macro_attribute]
+pub fn system(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let parser = Punctuated::<Ident, Token![,]>::parse_separated_nonempty;
+    let attr_idents = parser.parse(attr).unwrap();
+    println!("attr_idents {:?}", attr_idents.first());
+    item
+
+}
