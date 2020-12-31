@@ -1,24 +1,22 @@
-fn main() {
-    println!("Hello, world!");
+macro_rules! gen_entity {
+    ($($comp: ident),*) => {
+    #[allow(non_snake_case)]
+    #[allow(dead_code)]
+    struct Entity2 {
+        $($comp: Option<$comp>), *
+    }
 
-    let mut entities = vec![
-        Entity {
-            num_component: Some(NumComponent { num: 32 }),
-            string_component: Some(StringComponent { str: String::from("string1") }),
-        },
-        Entity {
-            num_component: Some(NumComponent { num: 64 }),
-            string_component: None,
-        },
-    ];
+    #[allow(non_snake_case)]
+    #[allow(dead_code)]
+    impl Entity2 {
+        $(fn $comp(&self) -> bool { self.$comp.is_some()}) *
+    }
 
-    inc_num_system(&mut entities);
-    inc_num_system(&mut entities);
-    print_data(&entities);
-    inc_num_system(&mut entities);
-    print_data(&entities);
+    }
+
 }
 
+gen_entity!(NumComponent,StringComponent);
 
 struct NumComponent {
     pub num: u32
@@ -53,8 +51,6 @@ impl Entity {
     fn get_string_component(&self) -> &StringComponent {
         self.string_component.as_ref().unwrap()
     }
-
-
 }
 
 type Entities = Vec<Entity>;
@@ -74,3 +70,29 @@ fn print_data(entities: &Entities) {
         println!("Data: {} {}", num_comp.num, string_comp.str);
     }
 }
+
+
+fn main() {
+    println!("Hello, world!");
+
+    let entity2 = Entity2 {NumComponent: Some(NumComponent{num: 17}), StringComponent: None };
+    println!("entity2: {} {} {}", entity2.NumComponent.as_ref().unwrap().num, entity2.NumComponent(), entity2.StringComponent());
+
+    let mut entities = vec![
+        Entity {
+            num_component: Some(NumComponent { num: 32 }),
+            string_component: Some(StringComponent { str: String::from("string1") }),
+        },
+        Entity {
+            num_component: Some(NumComponent { num: 64 }),
+            string_component: None,
+        },
+    ];
+
+    inc_num_system(&mut entities);
+    inc_num_system(&mut entities);
+    print_data(&entities);
+    inc_num_system(&mut entities);
+    print_data(&entities);
+}
+
