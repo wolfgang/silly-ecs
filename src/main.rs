@@ -44,7 +44,7 @@ fn for_components_test(entities: &Entities) {
 }
 
 
-#[system(NumComponent)]
+#[system(NumComponent, StringComponent)]
 fn print_numbers(entity: &Entity) {
     println!("print_numbers: {}", entity.get_num_component().num);
 }

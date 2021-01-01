@@ -2,13 +2,13 @@ use proc_macro::TokenStream;
 
 use inflector::Inflector;
 use quote::{format_ident, quote};
-use syn::{Block, Ident, parse_macro_input, ItemFn};
-use syn::parse::{Parser, Parse, ParseStream};
+use syn::{Block, Ident, ItemFn, parse_macro_input};
+use syn::parse::{Parse, Parser, ParseStream};
 use syn::punctuated::Punctuated;
 
 struct ForComponentsInput {
     comp: Ident,
-    block: Block
+    block: Block,
 }
 
 impl Parse for ForComponentsInput {
@@ -17,12 +17,8 @@ impl Parse for ForComponentsInput {
         input.parse::<syn::Token![,]>()?;
         let block = input.parse()?;
 
-        Ok(Self {comp, block})
+        Ok(Self { comp, block })
     }
-}
-
-struct SystemInput {
-    entity_fn: ItemFn
 }
 
 
@@ -31,18 +27,21 @@ pub fn system(attr: TokenStream, item: TokenStream) -> TokenStream {
     let parser = Punctuated::<Ident, syn::Token![,]>::parse_separated_nonempty;
     let attr_idents = parser.parse(attr).unwrap();
 
-    let comp = attr_idents.first().unwrap();
 
     let orig_tokens = item.clone();
-
     let orig_fn = parse_macro_input!(orig_tokens as ItemFn);
-
     let orig_fn_name = orig_fn.sig.ident;
     let wrapper_fn_name = format_ident!("{}_all", orig_fn_name.to_string());
-    let pred = format_ident!("has_{}", comp.to_string().to_snake_case());
+
+    let preds: Vec<Ident> = attr_idents
+        .iter()
+        .map(|ident| { format_ident!("has_{}", ident.to_string().to_snake_case()) })
+        .collect();
+
+
     let code = quote! {
         fn #wrapper_fn_name(entities: &Entities) {
-            for entity in entities.iter().filter(|entity| { entity.#pred() }) {
+            for entity in entities.iter().filter(|entity| { #(entity.#preds())&&* }) {
                 #orig_fn_name(entity)
             }
         }
@@ -52,13 +51,12 @@ pub fn system(attr: TokenStream, item: TokenStream) -> TokenStream {
     result_tokens.extend(item);
     result_tokens.extend(TokenStream::from(code));
     result_tokens
-
 }
 
 #[proc_macro]
 pub fn for_components(args: TokenStream) -> TokenStream {
     // let parser = Punctuated::<Block, Token![;]>::parse_separated_nonempty;
-    let ForComponentsInput {comp, block} = parse_macro_input!(args);
+    let ForComponentsInput { comp, block } = parse_macro_input!(args);
 
     let pred = format_ident!("has_{}", comp.to_string().to_snake_case());
 
