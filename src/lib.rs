@@ -2,14 +2,27 @@ use proc_macro::TokenStream;
 
 use inflector::Inflector;
 use quote::{format_ident, quote};
-use syn::{Block, Ident, parse, Token};
-use syn::parse::Parser;
+use syn::{Block, Ident, Token, parse_macro_input};
+use syn::parse::{Parser, Parse, ParseStream};
 use syn::punctuated::Punctuated;
+
+struct ForComponentsInput {
+    // comp: Ident,
+    block: Block
+}
+
+impl Parse for ForComponentsInput {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let block = input.parse()?;
+        Ok(Self {block})
+    }
+}
+
 
 #[proc_macro]
 pub fn for_components(args: TokenStream) -> TokenStream {
     // let parser = Punctuated::<Block, Token![;]>::parse_separated_nonempty;
-    let block: Block = parse(args).unwrap();
+    let ForComponentsInput {block} = parse_macro_input!(args);
     let code = quote! {
         let tmp_fun = || #block;
         tmp_fun();
