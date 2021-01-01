@@ -1,4 +1,4 @@
-use silly_ecs::{secs_impl_entity, secs_system};
+use silly_ecs::{secs_impl_entity, secs_system, log_call};
 
 #[derive(Debug, Default)]
 struct NumComponent { pub num: u32 }
@@ -46,6 +46,11 @@ fn print_numbers(entity: &Entity) {
     println!("print_numbers: {} {}", entity.num_component().num, entity.float_component().val);
 }
 
+#[log_call]
+fn log_me(num: u32) {
+    println!("I am being logged! {}", num);
+}
+
 fn main() {
     let mut entities = vec![
         Entity {
@@ -71,5 +76,8 @@ fn main() {
     sys_print_data(&entities);
     sys_inc_numbers(&mut entities);
     sys_print_numbers(&entities);
+
+    log_me(1234);
+
 }
 
