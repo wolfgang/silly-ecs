@@ -1,10 +1,22 @@
+use proc_macro::TokenStream;
 
-use proc_macro::{TokenStream};
-use quote::{quote, format_ident};
 use inflector::Inflector;
-use syn::punctuated::Punctuated;
+use quote::{format_ident, quote};
+use syn::{Block, Ident, parse, Token};
 use syn::parse::Parser;
-use syn::{Token, Ident};
+use syn::punctuated::Punctuated;
+
+#[proc_macro]
+pub fn for_components(args: TokenStream) -> TokenStream {
+    // let parser = Punctuated::<Block, Token![;]>::parse_separated_nonempty;
+    let block: Block = parse(args).unwrap();
+    let code = quote! {
+        let tmp_fun = || #block;
+        tmp_fun();
+    };
+    println!("{}", code);
+    TokenStream::from(code)
+}
 
 #[proc_macro]
 pub fn impl_entity(args: TokenStream) -> TokenStream {
@@ -25,7 +37,6 @@ pub fn impl_entity(args: TokenStream) -> TokenStream {
         comp_getters.push(format_ident!("get_{}", comp_name));
         comp_mut_getters.push(format_ident!("get_mut_{}", comp_name));
         comp_preds.push(format_ident!("has_{}", comp_name))
-
     };
 
     let code = quote! {
@@ -52,5 +63,4 @@ pub fn system(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr_idents = parser.parse(attr).unwrap();
     println!("attr_idents {:?}", attr_idents.first());
     item
-
 }

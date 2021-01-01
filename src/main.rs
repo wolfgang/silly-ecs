@@ -1,4 +1,4 @@
-use silly_ecs::{impl_entity, system};
+use silly_ecs::{for_components, impl_entity, system};
 
 struct NumComponent { pub num: u32 }
 
@@ -10,6 +10,7 @@ struct DummyComponent {}
 
 impl_entity!(NumComponent, StringComponent, FloatComponent, DummyComponent);
 
+
 type Entities = Vec<Entity>;
 
 fn inc_num_system(entities: &mut Entities) {
@@ -19,7 +20,7 @@ fn inc_num_system(entities: &mut Entities) {
     }
 }
 
-#[system(NumComponent,StringComponent)]
+#[system(NumComponent, StringComponent)]
 fn print_data(entities: &Entities) {
     for entity in entities.iter().filter(|entity| { entity.has_num_component() && entity.has_string_component() }) {
         let num_comp = entity.get_num_component();
@@ -28,13 +29,21 @@ fn print_data(entities: &Entities) {
     }
 }
 
+fn for_components_test() {
+    for_components!({
+        for i in 0 ..3 {
+            println!("HELLO {}", i);
+        }
+    });
+}
 
 fn main() {
+    for_components_test();
     let mut entity = Entity {
         num_component: Some(NumComponent { num: 17 }),
         string_component: Some(StringComponent { str: String::from("HELLO") }),
-        float_component: Some(FloatComponent {val: 1234.5}),
-        dummy_component: None
+        float_component: Some(FloatComponent { val: 1234.5 }),
+        dummy_component: None,
     };
 
     println!("entity has components: {} {} {} {}",
