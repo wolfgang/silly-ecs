@@ -26,10 +26,17 @@ impl Parse for ForComponentsInput {
 pub fn for_components(args: TokenStream) -> TokenStream {
     // let parser = Punctuated::<Block, Token![;]>::parse_separated_nonempty;
     let ForComponentsInput {comp, block} = parse_macro_input!(args);
-    println!("{:?}", comp);
+
+    let pred = format_ident!("has_{}", comp.to_string().to_snake_case());
+
     let code = quote! {
-        let tmp_fun = || #block;
-        tmp_fun();
+        let tmp_fun = |entity| #block;
+
+        for entity in entities
+            .iter()
+            .filter(|entity| { entity.#pred() }) {
+            tmp_fun(entity)
+        }
     };
     TokenStream::from(code)
 }

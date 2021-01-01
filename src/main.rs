@@ -24,21 +24,23 @@ fn inc_num_system(entities: &mut Entities) {
     }
 }
 
-#[system(NumComponent, StringComponent)]
-fn print_data(entities: &Entities) {
+fn print_data_all(entities: &Entities) {
     for entity in entities.iter().filter(|entity| { entity.has_num_component() && entity.has_string_component() }) {
-        let num_comp = entity.get_num_component();
-        let string_comp = entity.get_string_component();
-        println!("Data: {} {}", num_comp.num, string_comp.str);
+        print_data(entity);
     }
 }
 
+#[system(NumComponent, StringComponent)]
+fn print_data(entity: &Entity) {
+    let num_comp = entity.get_num_component();
+    let string_comp = entity.get_string_component();
+    println!("Data: {} {}", num_comp.num, string_comp.str);
+}
+
+
 fn for_components_test(entities: &Entities) {
     for_components!(NumComponent, {
-        for i in 0 ..3 {
-            println!("HELLO {}", i);
-        }
-        println!("{:?}", entities[0])
+        println!("{:?}", entity)
     });
 }
 
@@ -80,8 +82,8 @@ fn main() {
 
     inc_num_system(&mut entities);
     inc_num_system(&mut entities);
-    print_data(&entities);
+    print_data_all(&entities);
     inc_num_system(&mut entities);
-    print_data(&entities);
+    print_data_all(&entities);
 }
 
