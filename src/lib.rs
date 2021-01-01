@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 
 use inflector::Inflector;
 use quote::{format_ident, quote};
-use syn::{Block, Ident, ItemFn, parse_macro_input};
+use syn::{Block, ExprReference, Ident, ItemFn, parse_macro_input};
 use syn::parse::{Parse, Parser, ParseStream};
 use syn::punctuated::Punctuated;
 
@@ -21,27 +21,60 @@ impl Parse for ForComponentsInput {
     }
 }
 
+struct SystemAttributes {
+    components: Vec<Ident>,
+    is_mutable: bool,
+}
+
+impl Parse for SystemAttributes {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut components = Vec::with_capacity(10);
+        let mut is_mutable = false;
+        loop {
+            if input.peek(syn::Token![mut]) {
+                let _ = input.parse::<syn::Token![mut]>();
+                is_mutable = true;
+            }
+
+            let ident: Ident = input.parse()?;
+
+            components.push(ident);
+            if input.peek(syn::Token![,]) {
+                let _ = input.parse::<syn::Token![,]>();
+            } else {
+                break;
+            }
+        }
+
+        Ok(Self { components, is_mutable })
+    }
+}
+
 
 #[proc_macro_attribute]
 pub fn system(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let parser = Punctuated::<Ident, syn::Token![,]>::parse_separated_nonempty;
-    let attr_idents = parser.parse(attr).unwrap();
+    let SystemAttributes { components, is_mutable } = parse_macro_input!(attr as SystemAttributes);
 
-
-    let orig_tokens = item.clone();
-    let orig_fn = parse_macro_input!(orig_tokens as ItemFn);
+    let item_copy = item.clone();
+    let orig_fn = parse_macro_input!(item_copy as ItemFn);
     let orig_fn_name = orig_fn.sig.ident;
-    let wrapper_fn_name = format_ident!("{}_all", orig_fn_name.to_string());
+    let wrapper_fn_name = format_ident!("sys_{}", orig_fn_name.to_string());
 
-    let preds: Vec<Ident> = attr_idents
+    let preds: Vec<Ident> = components
         .iter()
         .map(|ident| { format_ident!("has_{}", ident.to_string().to_snake_case()) })
         .collect();
 
+    let mut_prefix = if is_mutable { "mut " } else {""};
+    let iter_type = if is_mutable { "iter_mut" } else {"iter"};
+    let tokens: TokenStream = format!("&{}Entities", mut_prefix).parse().unwrap();
+    let entities_ref: ExprReference = syn::parse(tokens).unwrap();
+    let iter = format_ident!("{}", iter_type);
+
 
     let code = quote! {
-        fn #wrapper_fn_name(entities: &Entities) {
-            for entity in entities.iter().filter(|entity| { #(entity.#preds())&&* }) {
+        fn #wrapper_fn_name(entities: #entities_ref) {
+            for entity in entities.#iter().filter(|entity| { #(entity.#preds())&&* }) {
                 #orig_fn_name(entity)
             }
         }

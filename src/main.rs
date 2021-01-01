@@ -1,4 +1,4 @@
-use silly_ecs::{for_components, impl_entity, system};
+use silly_ecs::{impl_entity, system};
 
 #[derive(Debug)]
 struct NumComponent { pub num: u32 }
@@ -17,60 +17,30 @@ impl_entity!(NumComponent, StringComponent, FloatComponent, DummyComponent);
 
 type Entities = Vec<Entity>;
 
-fn inc_num_system(entities: &mut Entities) {
-    for entity in entities.iter_mut().filter(|entity| { entity.has_num_component() }) {
-        let mut num_comp = entity.get_mut_num_component();
-        num_comp.num += 5;
-    }
+#[system(mut NumComponent)]
+fn inc_num(entity: &mut Entity) {
+    let mut num_comp = entity.get_mut_num_component();
+    num_comp.num += 5;
 }
 
-fn print_data_all(entities: &Entities) {
-    for entity in entities.iter().filter(|entity| { entity.has_num_component() && entity.has_string_component() }) {
-        print_data(entity);
-    }
-}
-
+#[system(NumComponent, StringComponent)]
 fn print_data(entity: &Entity) {
     let num_comp = entity.get_num_component();
     let string_comp = entity.get_string_component();
-    println!("Data: {} {}", num_comp.num, string_comp.str);
+    println!("print_data: {} {}", num_comp.num, string_comp.str);
 }
 
+#[system[NumComponent, mut StringComponent]]
+fn print_num_and_modify_str(entity: &mut Entity) {
+    entity.get_mut_string_component().str += "XXXX";
+    let num_comp = entity.get_num_component();
+    let string_comp = entity.get_string_component();
 
-fn for_components_test(entities: &Entities) {
-    for_components!(NumComponent, {
-        println!("{:?}", entity)
-    });
+    println!("print_num_and_modify_str: {} {}", num_comp.num, string_comp.str);
 }
 
-
-#[system(NumComponent, StringComponent)]
-fn print_numbers(entity: &Entity) {
-    println!("print_numbers: {}", entity.get_num_component().num);
-}
 
 fn main() {
-    let mut entity = Entity {
-        num_component: Some(NumComponent { num: 17 }),
-        string_component: Some(StringComponent { str: String::from("HELLO") }),
-        float_component: Some(FloatComponent { val: 1234.5 }),
-        dummy_component: None,
-    };
-
-    println!("entity has components: {} {} {} {}",
-             entity.has_num_component(),
-             entity.has_string_component(),
-             entity.has_float_component(),
-             entity.has_dummy_component());
-
-
-    entity.get_mut_float_component().val = 678.9;
-
-    println!("entity values: {} {} {}",
-             entity.get_num_component().num,
-             entity.get_string_component().str,
-             entity.get_float_component().val);
-
     let mut entities = vec![
         Entity {
             num_component: Some(NumComponent { num: 32 }),
@@ -84,13 +54,12 @@ fn main() {
         },
     ];
 
-    print_numbers_all(&entities);
-    // for_components_test(&entities);
-    //
-    // inc_num_system(&mut entities);
-    // inc_num_system(&mut entities);
-    // print_data_all(&entities);
-    // inc_num_system(&mut entities);
-    // print_data_all(&entities);
+    sys_inc_num(&mut entities);
+    sys_inc_num(&mut entities);
+    sys_print_data(&entities);
+    sys_inc_num(&mut entities);
+    sys_print_data(&entities);
+    sys_print_num_and_modify_str(&mut entities);
+    sys_print_data(&entities);
 }
 
