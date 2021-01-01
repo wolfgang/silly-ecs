@@ -67,8 +67,8 @@ pub fn impl_entity(args: TokenStream) -> TokenStream {
         let comp_name = comp.to_snake_case();
         comp_types.push(format_ident!("{}", comp));
         comp_names.push(format_ident!("{}", comp_name));
-        comp_getters.push(format_ident!("get_{}", comp_name));
-        comp_mut_getters.push(format_ident!("get_mut_{}", comp_name));
+        comp_getters.push(format_ident!("{}", comp_name));
+        comp_mut_getters.push(format_ident!("mut_{}", comp_name));
         comp_preds.push(format_ident!("has_{}", comp_name))
     };
 
@@ -142,7 +142,7 @@ pub fn system2(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
         .iter()
         .map(|attr| {
             let mut_prefix = if attr.is_mutable { "mut_" } else { "" };
-            format_ident!("get_{}{}", mut_prefix, attr.ident.to_string().to_snake_case())
+            format_ident!("{}{}", mut_prefix, attr.ident.to_string().to_snake_case())
         })
         .collect();
 

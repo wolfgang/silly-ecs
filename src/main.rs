@@ -19,31 +19,31 @@ type Entities = Vec<Entity>;
 
 #[system(mut NumComponent)]
 fn inc_num(entity: &mut Entity) {
-    entity.get_mut_num_component().num += 5;
+    entity.mut_num_component().num += 5;
 }
 
 #[system(NumComponent, StringComponent)]
 fn print_data(entity: &Entity) {
     println!("print_data: {} {}",
-             entity.get_num_component().num,
-             entity.get_string_component().str);
+             entity.num_component().num,
+             entity.string_component().str);
 }
 
 #[system[NumComponent, mut StringComponent]]
 fn print_num_and_modify_str(entity: &mut Entity) {
-    entity.get_mut_string_component().str += "XXXX";
-    println!("print_num_and_modify_str: {} {}", entity.get_num_component().num, entity.get_string_component().str);
+    entity.mut_string_component().str += "XXXX";
+    println!("print_num_and_modify_str: {} {}", entity.num_component().num, entity.string_component().str);
 }
 
 #[system[mut NumComponent, mut FloatComponent]]
 fn inc_numbers(entity: &mut Entity) {
-    entity.get_mut_num_component().num += 10;
-    entity.get_mut_float_component().val += 20.0;
+    entity.mut_num_component().num += 10;
+    entity.mut_float_component().val += 20.0;
 }
 
 #[system[NumComponent, FloatComponent]]
 fn print_numbers(entity: &Entity) {
-    println!("print_numbers: {} {}", entity.get_num_component().num, entity.get_float_component().val);
+    println!("print_numbers: {} {}", entity.num_component().num, entity.float_component().val);
 }
 
 
