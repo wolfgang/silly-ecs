@@ -30,12 +30,6 @@ fn print_data_all(entities: &Entities) {
     }
 }
 
-#[system(NumComponent, StringComponent)]
-fn system_fn() {
-    println!("system_fn called!");
-}
-
-
 fn print_data(entity: &Entity) {
     let num_comp = entity.get_num_component();
     let string_comp = entity.get_string_component();
@@ -49,9 +43,13 @@ fn for_components_test(entities: &Entities) {
     });
 }
 
-fn main() {
-    system_fn_all();
 
+#[system(NumComponent)]
+fn print_numbers(entity: &Entity) {
+    println!("print_numbers: {}", entity.get_num_component().num);
+}
+
+fn main() {
     let mut entity = Entity {
         num_component: Some(NumComponent { num: 17 }),
         string_component: Some(StringComponent { str: String::from("HELLO") }),
@@ -85,12 +83,14 @@ fn main() {
             ..Default::default()
         },
     ];
-    for_components_test(&entities);
 
-    inc_num_system(&mut entities);
-    inc_num_system(&mut entities);
-    print_data_all(&entities);
-    inc_num_system(&mut entities);
-    print_data_all(&entities);
+    print_numbers_all(&entities);
+    // for_components_test(&entities);
+    //
+    // inc_num_system(&mut entities);
+    // inc_num_system(&mut entities);
+    // print_data_all(&entities);
+    // inc_num_system(&mut entities);
+    // print_data_all(&entities);
 }
 

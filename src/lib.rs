@@ -30,8 +30,8 @@ struct SystemInput {
 pub fn system(attr: TokenStream, item: TokenStream) -> TokenStream {
     let parser = Punctuated::<Ident, syn::Token![,]>::parse_separated_nonempty;
     let attr_idents = parser.parse(attr).unwrap();
-    println!("attr_idents {:?}", attr_idents.first());
-    let comp = attr_idents.first();
+
+    let comp = attr_idents.first().unwrap();
 
     let orig_tokens = item.clone();
 
@@ -39,10 +39,12 @@ pub fn system(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let orig_fn_name = orig_fn.sig.ident;
     let wrapper_fn_name = format_ident!("{}_all", orig_fn_name.to_string());
-
+    let pred = format_ident!("has_{}", comp.to_string().to_snake_case());
     let code = quote! {
-        fn #wrapper_fn_name() {
-            #orig_fn_name()
+        fn #wrapper_fn_name(entities: &Entities) {
+            for entity in entities.iter().filter(|entity| { entity.#pred() }) {
+                #orig_fn_name(entity)
+            }
         }
     };
 
