@@ -2,19 +2,22 @@ use proc_macro::TokenStream;
 
 use inflector::Inflector;
 use quote::{format_ident, quote};
-use syn::{Block, Ident, Token, parse_macro_input};
+use syn::{Block, Ident, parse_macro_input};
 use syn::parse::{Parser, Parse, ParseStream};
 use syn::punctuated::Punctuated;
 
 struct ForComponentsInput {
-    // comp: Ident,
+    comp: Ident,
     block: Block
 }
 
 impl Parse for ForComponentsInput {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        let comp = input.parse()?;
+        input.parse::<syn::Token![,]>()?;
         let block = input.parse()?;
-        Ok(Self {block})
+
+        Ok(Self {comp, block})
     }
 }
 
@@ -22,18 +25,18 @@ impl Parse for ForComponentsInput {
 #[proc_macro]
 pub fn for_components(args: TokenStream) -> TokenStream {
     // let parser = Punctuated::<Block, Token![;]>::parse_separated_nonempty;
-    let ForComponentsInput {block} = parse_macro_input!(args);
+    let ForComponentsInput {comp, block} = parse_macro_input!(args);
+    println!("{:?}", comp);
     let code = quote! {
         let tmp_fun = || #block;
         tmp_fun();
     };
-    println!("{}", code);
     TokenStream::from(code)
 }
 
 #[proc_macro]
 pub fn impl_entity(args: TokenStream) -> TokenStream {
-    let parser = Punctuated::<Ident, Token![,]>::parse_separated_nonempty;
+    let parser = Punctuated::<Ident, syn::Token![,]>::parse_separated_nonempty;
     let comp_idents = parser.parse(args).unwrap();
 
     let mut comp_types = Vec::with_capacity(comp_idents.len());
@@ -53,7 +56,7 @@ pub fn impl_entity(args: TokenStream) -> TokenStream {
     };
 
     let code = quote! {
-        #[derive(Default)]
+        #[derive(Default, Debug)]
         struct Entity {
             #(#comp_names: Option<#comp_types>),*
         }
@@ -72,7 +75,7 @@ pub fn impl_entity(args: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn system(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let parser = Punctuated::<Ident, Token![,]>::parse_separated_nonempty;
+    let parser = Punctuated::<Ident, syn::Token![,]>::parse_separated_nonempty;
     let attr_idents = parser.parse(attr).unwrap();
     println!("attr_idents {:?}", attr_idents.first());
     item

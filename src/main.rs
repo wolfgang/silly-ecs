@@ -1,11 +1,15 @@
 use silly_ecs::{for_components, impl_entity, system};
 
+#[derive(Debug)]
 struct NumComponent { pub num: u32 }
 
+#[derive(Debug)]
 struct StringComponent { str: String }
 
+#[derive(Debug)]
 struct FloatComponent { pub val: f64 }
 
+#[derive(Debug)]
 struct DummyComponent {}
 
 impl_entity!(NumComponent, StringComponent, FloatComponent, DummyComponent);
@@ -29,16 +33,16 @@ fn print_data(entities: &Entities) {
     }
 }
 
-fn for_components_test() {
-    for_components!({
+fn for_components_test(entities: &Entities) {
+    for_components!(NumComponent, {
         for i in 0 ..3 {
             println!("HELLO {}", i);
         }
+        println!("{:?}", entities[0])
     });
 }
 
 fn main() {
-    for_components_test();
     let mut entity = Entity {
         num_component: Some(NumComponent { num: 17 }),
         string_component: Some(StringComponent { str: String::from("HELLO") }),
@@ -72,6 +76,7 @@ fn main() {
             ..Default::default()
         },
     ];
+    for_components_test(&entities);
 
     inc_num_system(&mut entities);
     inc_num_system(&mut entities);
