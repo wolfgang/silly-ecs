@@ -2,43 +2,33 @@ use proc_macro::TokenStream;
 
 use inflector::Inflector;
 use quote::{format_ident, quote};
-use syn::{Block, ExprReference, Ident, ItemFn, parse_macro_input};
-use syn::parse::{Parse, Parser, ParseStream};
+use syn::{ExprReference, Ident, ItemFn, parse_macro_input};
+use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 
-struct ForComponentsInput {
-    comp: Ident,
-    block: Block,
-}
-
-impl Parse for ForComponentsInput {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let comp = input.parse()?;
-        input.parse::<syn::Token![,]>()?;
-        let block = input.parse()?;
-
-        Ok(Self { comp, block })
-    }
+struct ComponentAttribute {
+    ident: Ident,
+    is_mutable: bool,
 }
 
 struct SystemAttributes {
-    components: Vec<Ident>,
-    is_mutable: bool,
+    attributes: Vec<ComponentAttribute>
 }
 
 impl Parse for SystemAttributes {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let mut components = Vec::with_capacity(10);
-        let mut is_mutable = false;
+        let mut attributes = Vec::with_capacity(10);
+
         loop {
+            let mut is_mutable = false;
             if input.peek(syn::Token![mut]) {
                 let _ = input.parse::<syn::Token![mut]>();
                 is_mutable = true;
             }
 
             let ident: Ident = input.parse()?;
+            attributes.push(ComponentAttribute { ident, is_mutable });
 
-            components.push(ident);
             if input.peek(syn::Token![,]) {
                 let _ = input.parse::<syn::Token![,]>();
             } else {
@@ -46,31 +36,43 @@ impl Parse for SystemAttributes {
             }
         }
 
-        Ok(Self { components, is_mutable })
+        Ok(Self { attributes })
+    }
+}
+
+struct ImplEntityInput {
+    components: Punctuated<Ident, syn::Token![,]>
+}
+
+impl Parse for ImplEntityInput {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let components = input.parse_terminated(Ident::parse)?;
+        Ok(Self { components })
     }
 }
 
 
 #[proc_macro_attribute]
-pub fn system(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let SystemAttributes { components, is_mutable } = parse_macro_input!(attr as SystemAttributes);
+pub fn system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
+    let SystemAttributes { attributes } = parse_macro_input!(attr as SystemAttributes);
 
-    let item_copy = item.clone();
+    let item_copy = orig_fn_tokens.clone();
     let orig_fn = parse_macro_input!(item_copy as ItemFn);
     let orig_fn_name = orig_fn.sig.ident;
     let wrapper_fn_name = format_ident!("sys_{}", orig_fn_name.to_string());
 
-    let preds: Vec<Ident> = components
+    let preds: Vec<Ident> = attributes
         .iter()
-        .map(|ident| { format_ident!("has_{}", ident.to_string().to_snake_case()) })
+        .map(|attr| { format_ident!("has_{}", attr.ident.to_string().to_snake_case()) })
         .collect();
 
-    let mut_prefix = if is_mutable { "mut " } else {""};
-    let iter_type = if is_mutable { "iter_mut" } else {"iter"};
+    let any_mutable = attributes.iter().any(|attr| { attr.is_mutable });
+
+    let mut_prefix = if any_mutable { "mut " } else { "" };
+    let iter_type = if any_mutable { "iter_mut" } else { "iter" };
     let tokens: TokenStream = format!("&{}Entities", mut_prefix).parse().unwrap();
     let entities_ref: ExprReference = syn::parse(tokens).unwrap();
     let iter = format_ident!("{}", iter_type);
-
 
     let code = quote! {
         fn #wrapper_fn_name(entities: #entities_ref) {
@@ -81,42 +83,67 @@ pub fn system(attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     let mut result_tokens = TokenStream::new();
-    result_tokens.extend(item);
+    result_tokens.extend(orig_fn_tokens);
+    result_tokens.extend(TokenStream::from(code));
+    result_tokens
+}
+
+#[proc_macro_attribute]
+pub fn system2(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
+    let SystemAttributes { attributes } = parse_macro_input!(attr as SystemAttributes);
+
+    let item_copy = orig_fn_tokens.clone();
+    let orig_fn = parse_macro_input!(item_copy as ItemFn);
+    let orig_fn_name = orig_fn.sig.ident;
+    let wrapper_fn_name = format_ident!("sys_{}", orig_fn_name.to_string());
+
+    let preds: Vec<Ident> = attributes
+        .iter()
+        .map(|attr| { format_ident!("has_{}", attr.ident.to_string().to_snake_case()) })
+        .collect();
+
+    let getters: Vec<Ident> = attributes
+        .iter()
+        .map(|attr| {
+            let mut_prefix = if attr.is_mutable { "mut_" } else { "" };
+            format_ident!("get_{}{}", mut_prefix, attr.ident.to_string().to_snake_case())
+        })
+        .collect();
+
+
+    let any_mutable = attributes.iter().any(|attr| { attr.is_mutable });
+
+    let mut_prefix = if any_mutable { "mut " } else { "" };
+    let iter_type = if any_mutable { "iter_mut" } else { "iter" };
+    let tokens: TokenStream = format!("&{}Entities", mut_prefix).parse().unwrap();
+    let entities_ref: ExprReference = syn::parse(tokens).unwrap();
+    let iter = format_ident!("{}", iter_type);
+
+    let code = quote! {
+        fn #wrapper_fn_name(entities: #entities_ref) {
+            for entity in entities.#iter().filter(|entity| { #(entity.#preds())&&* }) {
+                #orig_fn_name(#(entity.#getters()),*)
+            }
+        }
+    };
+
+    let mut result_tokens = TokenStream::new();
+    result_tokens.extend(orig_fn_tokens);
     result_tokens.extend(TokenStream::from(code));
     result_tokens
 }
 
 #[proc_macro]
-pub fn for_components(args: TokenStream) -> TokenStream {
-    // let parser = Punctuated::<Block, Token![;]>::parse_separated_nonempty;
-    let ForComponentsInput { comp, block } = parse_macro_input!(args);
-
-    let pred = format_ident!("has_{}", comp.to_string().to_snake_case());
-
-    let code = quote! {
-        let tmp_fun = |entity| #block;
-
-        for entity in entities
-            .iter()
-            .filter(|entity| { entity.#pred() }) {
-            tmp_fun(entity)
-        }
-    };
-    TokenStream::from(code)
-}
-
-#[proc_macro]
 pub fn impl_entity(args: TokenStream) -> TokenStream {
-    let parser = Punctuated::<Ident, syn::Token![,]>::parse_separated_nonempty;
-    let comp_idents = parser.parse(args).unwrap();
+    let ImplEntityInput { components } = parse_macro_input!(args as ImplEntityInput);
 
-    let mut comp_types = Vec::with_capacity(comp_idents.len());
-    let mut comp_names = Vec::with_capacity(comp_idents.len());
-    let mut comp_getters = Vec::with_capacity(comp_idents.len());
-    let mut comp_mut_getters = Vec::with_capacity(comp_idents.len());
-    let mut comp_preds = Vec::with_capacity(comp_idents.len());
+    let mut comp_types = Vec::with_capacity(components.len());
+    let mut comp_names = Vec::with_capacity(components.len());
+    let mut comp_getters = Vec::with_capacity(components.len());
+    let mut comp_mut_getters = Vec::with_capacity(components.len());
+    let mut comp_preds = Vec::with_capacity(components.len());
 
-    for ident in comp_idents.iter() {
+    for ident in components.iter() {
         let comp = ident.to_string();
         let comp_name = comp.to_snake_case();
         comp_types.push(format_ident!("{}", comp));
@@ -138,8 +165,6 @@ pub fn impl_entity(args: TokenStream) -> TokenStream {
             #(pub fn #comp_preds(&self) -> bool { self.#comp_names.is_some() })*
         }
     };
-
-    // println!("{}", code);
 
     TokenStream::from(code)
 }
