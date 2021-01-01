@@ -1,4 +1,4 @@
-use silly_ecs::{impl_entity, system};
+use silly_ecs::{secs_impl_entity, secs_system};
 
 #[derive(Debug, Default)]
 struct NumComponent { pub num: u32 }
@@ -12,40 +12,39 @@ struct FloatComponent { pub val: f64 }
 #[derive(Debug)]
 struct DummyComponent {}
 
-impl_entity!(NumComponent, StringComponent, FloatComponent, DummyComponent);
+secs_impl_entity!(NumComponent, StringComponent, FloatComponent, DummyComponent);
 
 
 type Entities = Vec<Entity>;
 
-#[system(mut NumComponent)]
+#[secs_system(mut NumComponent)]
 fn inc_num(entity: &mut Entity) {
     entity.mut_num_component().num += 5;
 }
 
-#[system(NumComponent, StringComponent)]
+#[secs_system(NumComponent, StringComponent)]
 fn print_data(entity: &Entity) {
     println!("print_data: {} {}",
              entity.num_component().num,
              entity.string_component().str);
 }
 
-#[system[NumComponent, mut StringComponent]]
+#[secs_system(NumComponent, mut StringComponent)]
 fn print_num_and_modify_str(entity: &mut Entity) {
     entity.mut_string_component().str += "XXXX";
     println!("print_num_and_modify_str: {} {}", entity.num_component().num, entity.string_component().str);
 }
 
-#[system[mut NumComponent, mut FloatComponent]]
+#[secs_system(mut NumComponent, mut FloatComponent)]
 fn inc_numbers(entity: &mut Entity) {
     entity.mut_num_component().num += 10;
     entity.mut_float_component().val += 20.0;
 }
 
-#[system[NumComponent, FloatComponent]]
+#[secs_system(NumComponent, FloatComponent)]
 fn print_numbers(entity: &Entity) {
     println!("print_numbers: {} {}", entity.num_component().num, entity.float_component().val);
 }
-
 
 fn main() {
     let mut entities = vec![

@@ -53,7 +53,7 @@ impl Parse for ImplEntityInput {
 
 
 #[proc_macro]
-pub fn impl_entity(args: TokenStream) -> TokenStream {
+pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
     let ImplEntityInput { components } = parse_macro_input!(args as ImplEntityInput);
 
     let mut comp_types = Vec::with_capacity(components.len());
@@ -89,7 +89,7 @@ pub fn impl_entity(args: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
+pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
     let SystemAttributes { attributes } = parse_macro_input!(attr as SystemAttributes);
 
     let item_copy = orig_fn_tokens.clone();
@@ -145,7 +145,6 @@ pub fn system2(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
             format_ident!("{}{}", mut_prefix, attr.ident.to_string().to_snake_case())
         })
         .collect();
-
 
     let any_mutable = attributes.iter().any(|attr| { attr.is_mutable });
 
