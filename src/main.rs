@@ -31,6 +31,11 @@ fn print_data_all(entities: &Entities) {
 }
 
 #[system(NumComponent, StringComponent)]
+fn system_fn() {
+    println!("system_fn called!");
+}
+
+
 fn print_data(entity: &Entity) {
     let num_comp = entity.get_num_component();
     let string_comp = entity.get_string_component();
@@ -45,6 +50,8 @@ fn for_components_test(entities: &Entities) {
 }
 
 fn main() {
+    system_fn_all();
+
     let mut entity = Entity {
         num_component: Some(NumComponent { num: 17 }),
         string_component: Some(StringComponent { str: String::from("HELLO") }),

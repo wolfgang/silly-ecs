@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 
 use inflector::Inflector;
 use quote::{format_ident, quote};
-use syn::{Block, Ident, parse_macro_input};
+use syn::{Block, Ident, parse_macro_input, ItemFn};
 use syn::parse::{Parser, Parse, ParseStream};
 use syn::punctuated::Punctuated;
 
@@ -21,6 +21,37 @@ impl Parse for ForComponentsInput {
     }
 }
 
+struct SystemInput {
+    entity_fn: ItemFn
+}
+
+
+#[proc_macro_attribute]
+pub fn system(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let parser = Punctuated::<Ident, syn::Token![,]>::parse_separated_nonempty;
+    let attr_idents = parser.parse(attr).unwrap();
+    println!("attr_idents {:?}", attr_idents.first());
+    let comp = attr_idents.first();
+
+    let orig_tokens = item.clone();
+
+    let orig_fn = parse_macro_input!(orig_tokens as ItemFn);
+
+    let orig_fn_name = orig_fn.sig.ident;
+    let wrapper_fn_name = format_ident!("{}_all", orig_fn_name.to_string());
+
+    let code = quote! {
+        fn #wrapper_fn_name() {
+            #orig_fn_name()
+        }
+    };
+
+    let mut result_tokens = TokenStream::new();
+    result_tokens.extend(item);
+    result_tokens.extend(TokenStream::from(code));
+    result_tokens
+
+}
 
 #[proc_macro]
 pub fn for_components(args: TokenStream) -> TokenStream {
@@ -78,12 +109,4 @@ pub fn impl_entity(args: TokenStream) -> TokenStream {
     // println!("{}", code);
 
     TokenStream::from(code)
-}
-
-#[proc_macro_attribute]
-pub fn system(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let parser = Punctuated::<Ident, syn::Token![,]>::parse_separated_nonempty;
-    let attr_idents = parser.parse(attr).unwrap();
-    println!("attr_idents {:?}", attr_idents.first());
-    item
 }
