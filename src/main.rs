@@ -1,4 +1,6 @@
-use silly_ecs::{secs_impl_entity, secs_system, log_call};
+use silly_ecs::{secs_impl_entity, secs_system, wrap_func};
+use std::fmt::Debug;
+use syn::export::fmt::Display;
 
 #[derive(Debug, Default)]
 struct NumComponent { pub num: u32 }
@@ -46,9 +48,9 @@ fn print_numbers(entity: &Entity) {
     println!("print_numbers: {} {}", entity.num_component().num, entity.float_component().val);
 }
 
-#[log_call]
-fn log_me(num: u32) {
-    println!("I am being logged! {}", num);
+#[wrap_func]
+fn entity_function<T, U>(entities: &Entities, arg1: T, arg2: U) where T: Debug, U: Display {
+    println!("entity_function: {:?} - {}\n{:?}", arg1, arg2, entities);
 }
 
 fn main() {
@@ -76,8 +78,8 @@ fn main() {
     sys_print_data(&entities);
     sys_inc_numbers(&mut entities);
     sys_print_numbers(&entities);
+    wrapped_entity_function(&entities, 1234, 5678.9);
 
-    log_me(1234);
 
 }
 

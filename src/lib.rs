@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 
 use inflector::Inflector;
 use quote::{format_ident, quote};
-use syn::{ExprReference, Ident, ItemFn, parse_macro_input};
+use syn::{ExprReference, Ident, ItemFn, parse_macro_input, FnArg};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 
@@ -49,6 +49,44 @@ impl Parse for ImplEntityInput {
         let components = input.parse_terminated(Ident::parse)?;
         Ok(Self { components })
     }
+}
+
+#[proc_macro_attribute]
+pub fn wrap_func(_attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
+    let fn_copy = orig_fn_tokens.clone();
+    let orig_fn = parse_macro_input!(fn_copy as ItemFn);
+    let orig_fn_name = orig_fn.sig.ident;
+    let orig_inputs = orig_fn.sig.inputs;
+    let orig_generics = orig_fn.sig.generics;
+    let wrapper_fn_name = format_ident!("wrapped_{}", orig_fn_name.to_string());
+
+    let gen_lt_token = orig_generics.lt_token;
+    let gen_params = orig_generics.params;
+    let gen_rt_token = orig_generics.gt_token;
+    let gen_where_clause = orig_generics.where_clause;
+
+    let mut extra_inputs: Punctuated<FnArg, syn::token::Comma> = Punctuated::new();
+    let mut extra_arg_names: Punctuated<Ident, syn::token::Comma> = Punctuated::new();
+    if orig_inputs.len() > 1 {
+        for i in 1 .. orig_inputs.len() {
+            extra_inputs.push(orig_inputs[i].clone());
+            extra_arg_names.push(format_ident!("arg{}", i));
+        }
+    }
+
+    let gen_prefix = quote! { #gen_lt_token #gen_params #gen_rt_token };
+    let code = quote! {
+        fn #wrapper_fn_name#gen_prefix(entities: &Entities, #extra_inputs) #gen_where_clause{
+                #orig_fn_name(entities, #extra_arg_names)
+            }
+    };
+
+    println!("{}", code);
+
+    let mut result_tokens = TokenStream::new();
+    result_tokens.extend(orig_fn_tokens);
+    result_tokens.extend(TokenStream::from(code));
+    result_tokens
 }
 
 
