@@ -1,5 +1,3 @@
-#[cfg(test)]
-pub mod _tests;
 
 use proc_macro::TokenStream;
 
