@@ -10,6 +10,7 @@ proc-macro = true
 [dependencies]
 quote = "1.0"
 Inflector="*"
+proc-macro2 = "*"
 
 [dependencies.syn]
 version = "1.0"

@@ -1,9 +1,10 @@
 
 use proc_macro::TokenStream;
+use proc_macro2;
 
 use inflector::Inflector;
 use quote::{format_ident, quote};
-use syn::{ExprReference, FnArg, Ident, ItemFn, parse_macro_input};
+use syn::{ExprReference, FnArg, Ident, ItemFn, parse_macro_input, WhereClause};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 
@@ -93,16 +94,11 @@ pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
 pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
     let item_copy = orig_fn_tokens.clone();
     let orig_fn = parse_macro_input!(item_copy as ItemFn);
-    let orig_fn_name = orig_fn.sig.ident;
+    let orig_sig = orig_fn.sig.clone();
+    let orig_fn_name = orig_sig.ident;
     let wrapper_fn_name = format_ident!("sys_{}", orig_fn_name.to_string());
 
-    let orig_generics = orig_fn.sig.generics;
-    let gen_lt_token = orig_generics.lt_token;
-    let gen_params = orig_generics.params;
-    let gen_rt_token = orig_generics.gt_token;
-    let gen_where_clause = orig_generics.where_clause;
-
-    let orig_inputs = orig_fn.sig.inputs;
+    let orig_inputs = orig_sig.inputs;
     let mut extra_inputs: Punctuated<FnArg, syn::token::Comma> = Punctuated::new();
     let mut extra_arg_names: Punctuated<Ident, syn::token::Comma> = Punctuated::new();
     for i in 1..orig_inputs.len() {
@@ -128,7 +124,8 @@ pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStrea
     let entities_ref: ExprReference = syn::parse(tokens).unwrap();
     let iter = format_ident!("{}", iter_type);
 
-    let gen_prefix = quote! { #gen_lt_token #gen_params #gen_rt_token };
+    let (gen_prefix, gen_where_clause) = make_gen_code(orig_fn);
+
     let code = quote! {
         fn #wrapper_fn_name#gen_prefix(entities: #entities_ref, #extra_inputs) #gen_where_clause {
             for entity in entities.#iter().filter(|entity| { #(entity.#preds())&&* }) {
@@ -141,6 +138,16 @@ pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStrea
     result_tokens.extend(orig_fn_tokens);
     result_tokens.extend(TokenStream::from(code));
     result_tokens
+}
+
+fn make_gen_code(orig_fn: ItemFn) -> (proc_macro2::TokenStream, Option<WhereClause>) {
+    let orig_generics = orig_fn.sig.generics;
+    let gen_lt_token = orig_generics.lt_token;
+    let gen_params = orig_generics.params;
+    let gen_rt_token = orig_generics.gt_token;
+
+    (quote! { #gen_lt_token #gen_params #gen_rt_token }, orig_generics.where_clause)
+
 }
 
 #[proc_macro_attribute]

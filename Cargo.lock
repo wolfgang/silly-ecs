@@ -72,6 +72,7 @@ name = "silly_ecs"
 version = "0.1.0"
 dependencies = [
  "Inflector",
+ "proc-macro2",
  "quote",
  "syn",
 ]
