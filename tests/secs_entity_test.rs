@@ -1,10 +1,10 @@
 use silly_ecs::secs_impl_entity;
 
 #[derive(Debug, Default)]
-struct NumComponent { num: u32 }
+pub struct NumComponent { num: u32 }
 
 #[derive(Debug, Default)]
-struct StringComponent { str: String }
+pub struct StringComponent { str: String }
 
 secs_impl_entity!(NumComponent, StringComponent);
 
@@ -57,11 +57,9 @@ fn can_set_components() {
     assert!(!entity.has_num_component());
     assert!(!entity.has_string_component());
 
-
     entity.set_num_component(NumComponent { num: 1234 });
     entity.set_string_component(StringComponent { str: "abcd".into() });
 
     assert_eq!(entity.num_component().num, 1234);
     assert_eq!(entity.string_component().str, "abcd");
-
 }

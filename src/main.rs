@@ -2,16 +2,16 @@ use silly_ecs::{secs_impl_entity, secs_system};
 use std::fmt::Debug;
 
 #[derive(Debug, Default)]
-struct NumComponent { pub num: u32 }
+pub struct NumComponent { pub num: u32 }
 
 #[derive(Debug, Default)]
-struct StringComponent { str: String }
+pub struct StringComponent { str: String }
 
 #[derive(Debug, Default)]
-struct FloatComponent { pub val: f64 }
+pub struct FloatComponent { pub val: f64 }
 
 #[derive(Debug)]
-struct DummyComponent {}
+pub struct DummyComponent {}
 
 secs_impl_entity!(NumComponent, StringComponent, FloatComponent, DummyComponent);
 

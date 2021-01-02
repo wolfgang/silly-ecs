@@ -74,7 +74,7 @@ pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
 
     let code = quote! {
         #[derive(Default, Debug)]
-        struct Entity {
+        pub struct Entity {
             #(#comp_names: Option<#comp_types>),*
         }
 
@@ -96,8 +96,8 @@ pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
 pub fn secs_system(attr: TokenStream, fn_tokens: TokenStream) -> TokenStream {
     let fn_tokens_clone = fn_tokens.clone();
     let orig_fn = parse_macro_input!(fn_tokens_clone as ItemFn);
-    let orig_sig = orig_fn.sig.clone();
     let SystemAttributes { attributes } = parse_macro_input!(attr as SystemAttributes);
+    let orig_sig = orig_fn.sig.clone();
     let is_mutable = attributes.iter().any(|attr| { attr.is_mutable });
 
     let (extra_inputs, extra_arg_names) = gen_extra_inputs(&orig_sig);

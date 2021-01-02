@@ -2,10 +2,12 @@ use silly_ecs::{secs_impl_entity, secs_system};
 use std::fmt::Debug;
 
 #[derive(Debug, Default, Clone, PartialEq)]
-struct NumComponent { num: u32 }
+pub struct NumComponent { num: u32 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
-struct FloatComponent { val: f64 }
+pub struct FloatComponent { val: f64 }
+
+secs_impl_entity!(NumComponent, FloatComponent);
 
 type Entities = Vec<Entity>;
 
@@ -29,8 +31,6 @@ impl Renderer for MyRenderer {
         self.log.push(format!("{:?}", renderable))
     }
 }
-
-secs_impl_entity!(NumComponent, FloatComponent);
 
 #[secs_system(NumComponent, FloatComponent)]
 fn for_all(entity: &Entity, spy: &mut SystemSpy) {
