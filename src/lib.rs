@@ -93,30 +93,19 @@ pub fn secs_system(attr: TokenStream, fn_tokens: TokenStream) -> TokenStream {
     let fn_tokens_clone = fn_tokens.clone();
     let orig_fn = parse_macro_input!(fn_tokens_clone as ItemFn);
     let orig_sig = orig_fn.sig.clone();
+    let SystemAttributes { attributes } = parse_macro_input!(attr as SystemAttributes);
+    let is_mutable = attributes.iter().any(|attr| { attr.is_mutable });
 
     let (extra_inputs, extra_arg_names) = gen_extra_inputs(&orig_sig);
-
-    let SystemAttributes { attributes } = parse_macro_input!(attr as SystemAttributes);
-
-    let preds: Vec<Ident> = attributes
-        .iter()
-        .map(|attr| { format_ident!("has_{}", attr.ident.to_string().to_snake_case()) })
-        .collect();
-
-    let any_mutable = attributes.iter().any(|attr| { attr.is_mutable });
-    let mut_prefix = if any_mutable { "mut " } else { "" };
-    let iter_type = if any_mutable { "iter_mut" } else { "iter" };
-    let tokens: TokenStream = format!("&{}Entities", mut_prefix).parse().unwrap();
-    let entities_ref: ExprReference = syn::parse(tokens).unwrap();
-    let iter = format_ident!("{}", iter_type);
-
+    let component_preds = gen_component_predicates(&attributes);
+    let entities_ref = gen_entities_ref(is_mutable);
+    let iter_call = gen_iter_call(is_mutable);
     let (gen_prefix, gen_where_clause) = gen_generics(orig_fn);
-    let orig_fn_name = orig_sig.ident;
-    let wrapper_fn_name = format_ident!("sys_{}", orig_fn_name.to_string());
+    let (orig_fn_name, wrapper_fn_name) = gen_fn_names(orig_sig);
 
     let code = quote! {
         fn #wrapper_fn_name#gen_prefix(entities: #entities_ref, #extra_inputs) #gen_where_clause {
-            for entity in entities.#iter().filter(|entity| { #(entity.#preds())&&* }) {
+            for entity in entities.#iter_call().filter(|entity| { #(entity.#component_preds())&&* }) {
                 #orig_fn_name(entity, #extra_arg_names)
             }
         }
@@ -126,6 +115,14 @@ pub fn secs_system(attr: TokenStream, fn_tokens: TokenStream) -> TokenStream {
     result_tokens.extend(fn_tokens);
     result_tokens.extend(TokenStream::from(code));
     result_tokens
+}
+
+fn gen_component_predicates(attributes: &Vec<ComponentAttribute>) -> Vec<Ident> {
+    let preds: Vec<Ident> = attributes
+        .iter()
+        .map(|attr| { format_ident!("has_{}", attr.ident.to_string().to_snake_case()) })
+        .collect();
+    preds
 }
 
 fn gen_extra_inputs(orig_sig: &Signature) -> (Punctuated<FnArg, syn::Token![,]>, Punctuated<Ident, syn::Token![,]>) {
@@ -141,6 +138,23 @@ fn gen_extra_inputs(orig_sig: &Signature) -> (Punctuated<FnArg, syn::Token![,]>,
         extra_inputs.push(arg);
     }
     (extra_inputs, extra_arg_names)
+}
+
+fn gen_entities_ref(is_mut: bool) -> ExprReference {
+    let mut_prefix = if is_mut { "mut " } else { "" };
+    let tokens: TokenStream = format!("&{}Entities", mut_prefix).parse().unwrap();
+    syn::parse(tokens).unwrap()
+}
+
+fn gen_iter_call(is_mut: bool) -> Ident {
+    let iter_type = if is_mut { "iter_mut" } else { "iter" };
+    format_ident!("{}", iter_type)
+}
+
+fn gen_fn_names(orig_sig: Signature) -> (Ident, Ident) {
+    let orig_fn_name = orig_sig.ident;
+    let wrapper_fn_name = format_ident!("sys_{}", orig_fn_name.to_string());
+    (orig_fn_name, wrapper_fn_name)
 }
 
 fn gen_generics(orig_fn: ItemFn) -> (proc_macro2::TokenStream, Option<WhereClause>) {
