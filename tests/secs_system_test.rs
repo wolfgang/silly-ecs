@@ -41,6 +41,9 @@ fn for_all(entity: &Entity, spy: &mut SystemSpy) {
 #[secs_system(NumComponent)]
 fn for_all_num_components(entity: &Entity, spy: &mut SystemSpy) {
     spy.called_num_components.push(entity.num_component().clone());
+    if entity.has_float_component() {
+        spy.called_float_components.push(entity.float_component().clone());
+    }
 }
 
 #[secs_system(mut NumComponent, FloatComponent)]
@@ -84,7 +87,7 @@ fn for_all_calls_entities_with_both_components() {
 }
 
 #[test]
-fn for_num_components_calls_entities_with_num_components() {
+fn for_num_components_calls_entities_with_num_components_only() {
     let entities = vec![
         Entity { num_component: Some(NumComponent { num: 1234 }), ..Default::default() },
         Entity::default()];
@@ -93,6 +96,7 @@ fn for_num_components_calls_entities_with_num_components() {
     sys_for_all_num_components(&entities, &mut spy);
 
     assert_eq!(spy.called_num_components.len(), 1);
+    assert_eq!(spy.called_float_components.len(), 0);
     assert_eq!(*entities[0].num_component(), spy.called_num_components[0]);
 }
 
