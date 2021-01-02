@@ -53,6 +53,11 @@ pub fn can_get_components_and_modify() {
 #[test]
 fn can_set_components() {
     let mut entity = Entity::new();
+
+    assert!(!entity.has_num_component());
+    assert!(!entity.has_string_component());
+
+
     entity.set_num_component(NumComponent { num: 1234 });
     entity.set_string_component(StringComponent { str: "abcd".into() });
 
