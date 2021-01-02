@@ -142,28 +142,6 @@ pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStrea
 }
 
 #[proc_macro_attribute]
-pub fn log_call(_: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
-    let orig_fn_tokens_copy = orig_fn_tokens.clone();
-    let orig_fn = parse_macro_input!(orig_fn_tokens_copy as ItemFn);
-    let orig_vis = orig_fn.vis;
-    let orig_block = orig_fn.block;
-    let orig_sig = orig_fn.sig;
-    let orig_name = orig_sig.ident.clone().to_string();
-
-    let code = quote! {
-        #orig_vis #orig_sig {
-            println!("LOGGED CALL: {}", #orig_name);
-            #orig_block
-        }
-
-    };
-
-    println!("log_me code:{}", code);
-
-    TokenStream::from(code)
-}
-
-#[proc_macro_attribute]
 pub fn system2(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
     let SystemAttributes { attributes } = parse_macro_input!(attr as SystemAttributes);
 
