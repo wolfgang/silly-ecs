@@ -90,8 +90,6 @@ pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
-    let SystemAttributes { attributes } = parse_macro_input!(attr as SystemAttributes);
-
     let item_copy = orig_fn_tokens.clone();
     let orig_fn = parse_macro_input!(item_copy as ItemFn);
     let orig_fn_name = orig_fn.sig.ident;
@@ -106,17 +104,16 @@ pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStrea
     let orig_inputs = orig_fn.sig.inputs;
     let mut extra_inputs: Punctuated<FnArg, syn::token::Comma> = Punctuated::new();
     let mut extra_arg_names: Punctuated<Ident, syn::token::Comma> = Punctuated::new();
-    if orig_inputs.len() > 1 {
-        for i in 1..orig_inputs.len() {
-            let arg = orig_inputs[i].clone();
-            for token in quote! {#arg} {
-                extra_arg_names.push(format_ident!("{}", token.to_string()));
-                break;
-            }
-            extra_inputs.push(arg);
+    for i in 1..orig_inputs.len() {
+        let arg = orig_inputs[i].clone();
+        for token in quote! {#arg} {
+            extra_arg_names.push(format_ident!("{}", token.to_string()));
+            break;
         }
+        extra_inputs.push(arg);
     }
 
+    let SystemAttributes { attributes } = parse_macro_input!(attr as SystemAttributes);
     let preds: Vec<Ident> = attributes
         .iter()
         .map(|attr| { format_ident!("has_{}", attr.ident.to_string().to_snake_case()) })
