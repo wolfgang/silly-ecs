@@ -89,9 +89,9 @@ pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
 
 
 #[proc_macro_attribute]
-pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
-    let item_copy = orig_fn_tokens.clone();
-    let orig_fn = parse_macro_input!(item_copy as ItemFn);
+pub fn secs_system(attr: TokenStream, fn_tokens: TokenStream) -> TokenStream {
+    let fn_tokens_clone = fn_tokens.clone();
+    let orig_fn = parse_macro_input!(fn_tokens_clone as ItemFn);
     let orig_sig = orig_fn.sig.clone();
 
     let (extra_inputs, extra_arg_names) = gen_extra_inputs(&orig_sig);
@@ -123,15 +123,15 @@ pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStrea
     };
 
     let mut result_tokens = TokenStream::new();
-    result_tokens.extend(orig_fn_tokens);
+    result_tokens.extend(fn_tokens);
     result_tokens.extend(TokenStream::from(code));
     result_tokens
 }
 
-fn gen_extra_inputs(orig_sig: &Signature) -> (Punctuated<FnArg, syn::token::Comma>, Punctuated<Ident, syn::token::Comma>) {
+fn gen_extra_inputs(orig_sig: &Signature) -> (Punctuated<FnArg, syn::Token![,]>, Punctuated<Ident, syn::Token![,]>) {
     let orig_inputs = orig_sig.inputs.clone();
-    let mut extra_inputs: Punctuated<FnArg, syn::token::Comma> = Punctuated::new();
-    let mut extra_arg_names: Punctuated<Ident, syn::token::Comma> = Punctuated::new();
+    let mut extra_inputs: Punctuated<FnArg, syn::Token![,]> = Punctuated::new();
+    let mut extra_arg_names: Punctuated<Ident, syn::Token![,]> = Punctuated::new();
     for i in 1..orig_inputs.len() {
         let arg = orig_inputs[i].clone();
         for token in quote! {#arg} {
