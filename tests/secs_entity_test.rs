@@ -1,9 +1,10 @@
-use silly_ecs::{secs_impl_entity};
+use silly_ecs::secs_impl_entity;
 
 #[derive(Debug, Default)]
 struct NumComponent { num: u32 }
+
 #[derive(Debug, Default)]
-struct StringComponent {str: String}
+struct StringComponent { str: String }
 
 secs_impl_entity!(NumComponent, StringComponent);
 
@@ -19,7 +20,7 @@ pub fn default_entity_has_no_components() {
 pub fn can_construct_with_components() {
     let entity = Entity {
         num_component: Some(NumComponent::default()),
-        string_component: Some(StringComponent::default())
+        string_component: Some(StringComponent::default()),
     };
     assert!(entity.has_num_component());
     assert!(entity.has_string_component());
@@ -28,8 +29,8 @@ pub fn can_construct_with_components() {
 #[test]
 pub fn can_get_components() {
     let entity = Entity {
-        num_component: Some(NumComponent{num: 1234 }),
-        string_component: Some(StringComponent { str: "abcd".into() })
+        num_component: Some(NumComponent { num: 1234 }),
+        string_component: Some(StringComponent { str: "abcd".into() }),
     };
     assert_eq!(entity.num_component().num, 1234);
     assert_eq!(entity.string_component().str, "abcd");
@@ -38,8 +39,8 @@ pub fn can_get_components() {
 #[test]
 pub fn can_get_components_and_modify() {
     let mut entity = Entity {
-        num_component: Some(NumComponent{num: 1000 }),
-        string_component: Some(StringComponent { str: "abcd".into() })
+        num_component: Some(NumComponent { num: 1000 }),
+        string_component: Some(StringComponent { str: "abcd".into() }),
     };
 
     entity.mut_num_component().num += 1000;
@@ -47,4 +48,15 @@ pub fn can_get_components_and_modify() {
 
     assert_eq!(entity.num_component().num, 2000);
     assert_eq!(entity.string_component().str, "abcdefgh");
+}
+
+#[test]
+fn can_set_components() {
+    let mut entity = Entity::new();
+    entity.set_num_component(NumComponent { num: 1234 });
+    entity.set_string_component(StringComponent { str: "abcd".into() });
+
+    assert_eq!(entity.num_component().num, 1234);
+    assert_eq!(entity.string_component().str, "abcd");
+
 }

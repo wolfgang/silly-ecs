@@ -1,10 +1,9 @@
-
 use proc_macro::TokenStream;
-use proc_macro2;
 
 use inflector::Inflector;
+use proc_macro2;
 use quote::{format_ident, quote};
-use syn::{ExprReference, FnArg, Ident, ItemFn, parse_macro_input, WhereClause, Signature};
+use syn::{ExprReference, FnArg, Ident, ItemFn, parse_macro_input, Signature, WhereClause};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 
@@ -59,6 +58,7 @@ pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
 
     let mut comp_types = Vec::with_capacity(components.len());
     let mut comp_names = Vec::with_capacity(components.len());
+    let mut comp_setters = Vec::with_capacity(components.len());
     let mut comp_mut_names = Vec::with_capacity(components.len());
     let mut comp_preds = Vec::with_capacity(components.len());
 
@@ -67,6 +67,7 @@ pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
         let comp_name = comp.to_snake_case();
         comp_types.push(format_ident!("{}", comp));
         comp_names.push(format_ident!("{}", comp_name));
+        comp_setters.push(format_ident!("set_{}", comp_name));
         comp_mut_names.push(format_ident!("mut_{}", comp_name));
         comp_preds.push(format_ident!("has_{}", comp_name))
     };
@@ -78,6 +79,9 @@ pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
         }
 
         impl Entity {
+            pub fn new() -> Self { Self::default() }
+            #(pub fn #comp_setters(&mut self, comp: #comp_types)  { self.#comp_names = Some(comp) })*
+
             #(pub fn #comp_names(&self) -> &#comp_types { self.#comp_names.as_ref().unwrap() })*
             #(pub fn #comp_mut_names(&mut self) -> &mut #comp_types { self.#comp_names.as_mut().unwrap() })*
             #(pub fn #comp_preds(&self) -> bool { self.#comp_names.is_some() })*
