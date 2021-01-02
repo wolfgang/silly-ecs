@@ -150,49 +150,4 @@ fn gen_generics(orig_fn: ItemFn) -> (proc_macro2::TokenStream, Option<WhereClaus
     let gen_rt_token = orig_generics.gt_token;
 
     (quote! { #gen_lt_token #gen_params #gen_rt_token }, orig_generics.where_clause)
-
-}
-
-#[proc_macro_attribute]
-pub fn system2(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
-    let SystemAttributes { attributes } = parse_macro_input!(attr as SystemAttributes);
-
-    let item_copy = orig_fn_tokens.clone();
-    let orig_fn = parse_macro_input!(item_copy as ItemFn);
-    let orig_fn_name = orig_fn.sig.ident;
-    let wrapper_fn_name = format_ident!("sys_{}", orig_fn_name.to_string());
-
-    let preds: Vec<Ident> = attributes
-        .iter()
-        .map(|attr| { format_ident!("has_{}", attr.ident.to_string().to_snake_case()) })
-        .collect();
-
-    let getters: Vec<Ident> = attributes
-        .iter()
-        .map(|attr| {
-            let mut_prefix = if attr.is_mutable { "mut_" } else { "" };
-            format_ident!("{}{}", mut_prefix, attr.ident.to_string().to_snake_case())
-        })
-        .collect();
-
-    let any_mutable = attributes.iter().any(|attr| { attr.is_mutable });
-
-    let mut_prefix = if any_mutable { "mut " } else { "" };
-    let iter_type = if any_mutable { "iter_mut" } else { "iter" };
-    let tokens: TokenStream = format!("&{}Entities", mut_prefix).parse().unwrap();
-    let entities_ref: ExprReference = syn::parse(tokens).unwrap();
-    let iter = format_ident!("{}", iter_type);
-
-    let code = quote! {
-        fn #wrapper_fn_name(entities: #entities_ref) {
-            for entity in entities.#iter().filter(|entity| { #(entity.#preds())&&* }) {
-                #orig_fn_name(#(entity.#getters()),*)
-            }
-        }
-    };
-
-    let mut result_tokens = TokenStream::new();
-    result_tokens.extend(orig_fn_tokens);
-    result_tokens.extend(TokenStream::from(code));
-    result_tokens
 }
