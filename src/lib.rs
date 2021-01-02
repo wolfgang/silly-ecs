@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 
 use inflector::Inflector;
 use quote::{format_ident, quote};
-use syn::{ExprReference, Ident, ItemFn, parse_macro_input, FnArg};
+use syn::{ExprReference, FnArg, Ident, ItemFn, parse_macro_input};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 
@@ -107,9 +107,13 @@ pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStrea
     let mut extra_inputs: Punctuated<FnArg, syn::token::Comma> = Punctuated::new();
     let mut extra_arg_names: Punctuated<Ident, syn::token::Comma> = Punctuated::new();
     if orig_inputs.len() > 1 {
-        for i in 1 .. orig_inputs.len() {
-            extra_inputs.push(orig_inputs[i].clone());
-            extra_arg_names.push(format_ident!("arg{}", i));
+        for i in 1..orig_inputs.len() {
+            let arg = orig_inputs[i].clone();
+            for token in quote! {#arg} {
+                extra_arg_names.push(format_ident!("{}", token.to_string()));
+                break;
+            }
+            extra_inputs.push(arg);
         }
     }
 

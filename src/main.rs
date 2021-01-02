@@ -61,10 +61,10 @@ impl Renderer for MyRenderer {
 }
 
 #[secs_system(NumComponent, FloatComponent, StringComponent)]
-fn render_data<T>(entity: &Entity, arg1: &T) where T: Renderer {
-    arg1.render(entity.num_component().num);
-    arg1.render(entity.float_component().val);
-    arg1.render(entity.string_component().str.as_str());
+fn render_data<T>(entity: &Entity, renderer: &T) where T: Renderer {
+    renderer.render(entity.num_component().num);
+    renderer.render(entity.float_component().val);
+    renderer.render(entity.string_component().str.as_str());
 }
 
 fn main() {
