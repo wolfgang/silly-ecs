@@ -59,8 +59,7 @@ pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
 
     let mut comp_types = Vec::with_capacity(components.len());
     let mut comp_names = Vec::with_capacity(components.len());
-    let mut comp_getters = Vec::with_capacity(components.len());
-    let mut comp_mut_getters = Vec::with_capacity(components.len());
+    let mut comp_mut_names = Vec::with_capacity(components.len());
     let mut comp_preds = Vec::with_capacity(components.len());
 
     for ident in components.iter() {
@@ -68,8 +67,7 @@ pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
         let comp_name = comp.to_snake_case();
         comp_types.push(format_ident!("{}", comp));
         comp_names.push(format_ident!("{}", comp_name));
-        comp_getters.push(format_ident!("{}", comp_name));
-        comp_mut_getters.push(format_ident!("mut_{}", comp_name));
+        comp_mut_names.push(format_ident!("mut_{}", comp_name));
         comp_preds.push(format_ident!("has_{}", comp_name))
     };
 
@@ -80,8 +78,8 @@ pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
         }
 
         impl Entity {
-            #(pub fn #comp_getters(&self) -> &#comp_types { self.#comp_names.as_ref().unwrap() })*
-            #(pub fn #comp_mut_getters(&mut self) -> &mut #comp_types { self.#comp_names.as_mut().unwrap() })*
+            #(pub fn #comp_names(&self) -> &#comp_types { self.#comp_names.as_ref().unwrap() })*
+            #(pub fn #comp_mut_names(&mut self) -> &mut #comp_types { self.#comp_names.as_mut().unwrap() })*
             #(pub fn #comp_preds(&self) -> bool { self.#comp_names.is_some() })*
         }
     };
