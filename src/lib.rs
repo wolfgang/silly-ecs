@@ -4,7 +4,7 @@ use proc_macro2;
 
 use inflector::Inflector;
 use quote::{format_ident, quote};
-use syn::{ExprReference, FnArg, Ident, ItemFn, parse_macro_input, WhereClause};
+use syn::{ExprReference, FnArg, Ident, ItemFn, parse_macro_input, WhereClause, Signature};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 
@@ -95,36 +95,26 @@ pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStrea
     let item_copy = orig_fn_tokens.clone();
     let orig_fn = parse_macro_input!(item_copy as ItemFn);
     let orig_sig = orig_fn.sig.clone();
-    let orig_fn_name = orig_sig.ident;
-    let wrapper_fn_name = format_ident!("sys_{}", orig_fn_name.to_string());
 
-    let orig_inputs = orig_sig.inputs;
-    let mut extra_inputs: Punctuated<FnArg, syn::token::Comma> = Punctuated::new();
-    let mut extra_arg_names: Punctuated<Ident, syn::token::Comma> = Punctuated::new();
-    for i in 1..orig_inputs.len() {
-        let arg = orig_inputs[i].clone();
-        for token in quote! {#arg} {
-            extra_arg_names.push(format_ident!("{}", token.to_string()));
-            break;
-        }
-        extra_inputs.push(arg);
-    }
+    let (extra_inputs, extra_arg_names) = gen_extra_inputs(&orig_sig);
 
     let SystemAttributes { attributes } = parse_macro_input!(attr as SystemAttributes);
+
     let preds: Vec<Ident> = attributes
         .iter()
         .map(|attr| { format_ident!("has_{}", attr.ident.to_string().to_snake_case()) })
         .collect();
 
     let any_mutable = attributes.iter().any(|attr| { attr.is_mutable });
-
     let mut_prefix = if any_mutable { "mut " } else { "" };
     let iter_type = if any_mutable { "iter_mut" } else { "iter" };
     let tokens: TokenStream = format!("&{}Entities", mut_prefix).parse().unwrap();
     let entities_ref: ExprReference = syn::parse(tokens).unwrap();
     let iter = format_ident!("{}", iter_type);
 
-    let (gen_prefix, gen_where_clause) = make_gen_code(orig_fn);
+    let (gen_prefix, gen_where_clause) = gen_generics(orig_fn);
+    let orig_fn_name = orig_sig.ident;
+    let wrapper_fn_name = format_ident!("sys_{}", orig_fn_name.to_string());
 
     let code = quote! {
         fn #wrapper_fn_name#gen_prefix(entities: #entities_ref, #extra_inputs) #gen_where_clause {
@@ -140,7 +130,22 @@ pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStrea
     result_tokens
 }
 
-fn make_gen_code(orig_fn: ItemFn) -> (proc_macro2::TokenStream, Option<WhereClause>) {
+fn gen_extra_inputs(orig_sig: &Signature) -> (Punctuated<FnArg, syn::token::Comma>, Punctuated<Ident, syn::token::Comma>) {
+    let orig_inputs = orig_sig.inputs.clone();
+    let mut extra_inputs: Punctuated<FnArg, syn::token::Comma> = Punctuated::new();
+    let mut extra_arg_names: Punctuated<Ident, syn::token::Comma> = Punctuated::new();
+    for i in 1..orig_inputs.len() {
+        let arg = orig_inputs[i].clone();
+        for token in quote! {#arg} {
+            extra_arg_names.push(format_ident!("{}", token.to_string()));
+            break;
+        }
+        extra_inputs.push(arg);
+    }
+    (extra_inputs, extra_arg_names)
+}
+
+fn gen_generics(orig_fn: ItemFn) -> (proc_macro2::TokenStream, Option<WhereClause>) {
     let orig_generics = orig_fn.sig.generics;
     let gen_lt_token = orig_generics.lt_token;
     let gen_params = orig_generics.params;
