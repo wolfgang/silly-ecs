@@ -51,45 +51,6 @@ impl Parse for ImplEntityInput {
     }
 }
 
-#[proc_macro_attribute]
-pub fn wrap_func(_attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
-    let fn_copy = orig_fn_tokens.clone();
-    let orig_fn = parse_macro_input!(fn_copy as ItemFn);
-    let orig_fn_name = orig_fn.sig.ident;
-    let orig_inputs = orig_fn.sig.inputs;
-    let orig_generics = orig_fn.sig.generics;
-    let wrapper_fn_name = format_ident!("wrapped_{}", orig_fn_name.to_string());
-
-    let gen_lt_token = orig_generics.lt_token;
-    let gen_params = orig_generics.params;
-    let gen_rt_token = orig_generics.gt_token;
-    let gen_where_clause = orig_generics.where_clause;
-
-    let mut extra_inputs: Punctuated<FnArg, syn::token::Comma> = Punctuated::new();
-    let mut extra_arg_names: Punctuated<Ident, syn::token::Comma> = Punctuated::new();
-    if orig_inputs.len() > 1 {
-        for i in 1 .. orig_inputs.len() {
-            extra_inputs.push(orig_inputs[i].clone());
-            extra_arg_names.push(format_ident!("arg{}", i));
-        }
-    }
-
-    let gen_prefix = quote! { #gen_lt_token #gen_params #gen_rt_token };
-    let code = quote! {
-        fn #wrapper_fn_name#gen_prefix(entities: &Entities, #extra_inputs) #gen_where_clause{
-                #orig_fn_name(entities, #extra_arg_names)
-            }
-    };
-
-    println!("{}", code);
-
-    let mut result_tokens = TokenStream::new();
-    result_tokens.extend(orig_fn_tokens);
-    result_tokens.extend(TokenStream::from(code));
-    result_tokens
-}
-
-
 #[proc_macro]
 pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
     let ImplEntityInput { components } = parse_macro_input!(args as ImplEntityInput);
@@ -126,6 +87,7 @@ pub fn secs_impl_entity(args: TokenStream) -> TokenStream {
     TokenStream::from(code)
 }
 
+
 #[proc_macro_attribute]
 pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStream {
     let SystemAttributes { attributes } = parse_macro_input!(attr as SystemAttributes);
@@ -134,6 +96,22 @@ pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStrea
     let orig_fn = parse_macro_input!(item_copy as ItemFn);
     let orig_fn_name = orig_fn.sig.ident;
     let wrapper_fn_name = format_ident!("sys_{}", orig_fn_name.to_string());
+
+    let orig_generics = orig_fn.sig.generics;
+    let gen_lt_token = orig_generics.lt_token;
+    let gen_params = orig_generics.params;
+    let gen_rt_token = orig_generics.gt_token;
+    let gen_where_clause = orig_generics.where_clause;
+
+    let orig_inputs = orig_fn.sig.inputs;
+    let mut extra_inputs: Punctuated<FnArg, syn::token::Comma> = Punctuated::new();
+    let mut extra_arg_names: Punctuated<Ident, syn::token::Comma> = Punctuated::new();
+    if orig_inputs.len() > 1 {
+        for i in 1 .. orig_inputs.len() {
+            extra_inputs.push(orig_inputs[i].clone());
+            extra_arg_names.push(format_ident!("arg{}", i));
+        }
+    }
 
     let preds: Vec<Ident> = attributes
         .iter()
@@ -148,10 +126,11 @@ pub fn secs_system(attr: TokenStream, orig_fn_tokens: TokenStream) -> TokenStrea
     let entities_ref: ExprReference = syn::parse(tokens).unwrap();
     let iter = format_ident!("{}", iter_type);
 
+    let gen_prefix = quote! { #gen_lt_token #gen_params #gen_rt_token };
     let code = quote! {
-        fn #wrapper_fn_name(entities: #entities_ref) {
+        fn #wrapper_fn_name#gen_prefix(entities: #entities_ref, #extra_inputs) #gen_where_clause {
             for entity in entities.#iter().filter(|entity| { #(entity.#preds())&&* }) {
-                #orig_fn_name(entity)
+                #orig_fn_name(entity, #extra_arg_names)
             }
         }
     };

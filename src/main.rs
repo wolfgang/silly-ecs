@@ -1,6 +1,5 @@
-use silly_ecs::{secs_impl_entity, secs_system, wrap_func};
+use silly_ecs::{secs_impl_entity, secs_system};
 use std::fmt::Debug;
-use syn::export::fmt::Display;
 
 #[derive(Debug, Default)]
 struct NumComponent { pub num: u32 }
@@ -48,9 +47,24 @@ fn print_numbers(entity: &Entity) {
     println!("print_numbers: {} {}", entity.num_component().num, entity.float_component().val);
 }
 
-#[wrap_func]
-fn entity_function<T, U>(entities: &Entities, arg1: T, arg2: U) where T: Debug, U: Display {
-    println!("entity_function: {:?} - {}\n{:?}", arg1, arg2, entities);
+trait Renderer {
+    fn render<T>(&self, renderable: T) where T: Debug;
+}
+
+struct MyRenderer {
+}
+
+impl Renderer for MyRenderer {
+    fn render<T>(&self, renderable: T) where T: Debug {
+        println!("[RENDER] {:?}", renderable);
+    }
+}
+
+#[secs_system(NumComponent, FloatComponent, StringComponent)]
+fn render_data<T>(entity: &Entity, arg1: &T) where T: Renderer {
+    arg1.render(entity.num_component().num);
+    arg1.render(entity.float_component().val);
+    arg1.render(entity.string_component().str.as_str());
 }
 
 fn main() {
@@ -69,6 +83,8 @@ fn main() {
         },
     ];
 
+    let renderer = MyRenderer {};
+
     sys_inc_num(&mut entities);
     sys_inc_num(&mut entities);
     sys_print_data(&entities);
@@ -78,7 +94,7 @@ fn main() {
     sys_print_data(&entities);
     sys_inc_numbers(&mut entities);
     sys_print_numbers(&entities);
-    wrapped_entity_function(&entities, 1234, 5678.9);
+    sys_render_data(&entities, &renderer)
 
 
 }
